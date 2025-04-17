@@ -1,0 +1,45 @@
+# Бинарные файлы и папки
+/build/
+/bin/
+/vendor/
+
+# Логи
+/logs/
+*.log
+
+# Зависимости
+/node_modules/
+
+# Временные файлы
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# Конфигурационные файлы
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Кэши
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+.gradle/
+
+# Результаты тестов
+/coverage/
+/test-results/
+
+# Сгенерированные файлы
+/gen/
+*.pb.go
+*.swagger.json
+
+# Другие файлы и папки
+/tmp/ 
