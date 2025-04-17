@@ -6,7 +6,6 @@ import (
 )
 
 func TestNewReception(t *testing.T) {
-	// Arrange
 	pvzID := "pvz-123"
 
 	// Act
@@ -34,7 +33,6 @@ func TestNewReception(t *testing.T) {
 }
 
 func TestReception_Close(t *testing.T) {
-	// Arrange
 	reception := NewReception("pvz-123")
 
 	// Act
@@ -58,7 +56,6 @@ func TestReception_Close(t *testing.T) {
 }
 
 func TestReception_AddProduct(t *testing.T) {
-	// Arrange
 	reception := NewReception("pvz-123")
 	product, _ := NewProduct(ProductTypeElectronics, reception.ID)
 

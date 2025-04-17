@@ -6,7 +6,6 @@ import (
 )
 
 func TestNewProduct_ValidType(t *testing.T) {
-	// Arrange
 	validTypes := []string{
 		ProductTypeElectronics,
 		ProductTypeClothes,
@@ -14,7 +13,6 @@ func TestNewProduct_ValidType(t *testing.T) {
 	}
 	receptionID := "reception-123"
 
-	// Act & Assert
 	for _, productType := range validTypes {
 		product, err := NewProduct(productType, receptionID)
 
@@ -40,7 +38,6 @@ func TestNewProduct_ValidType(t *testing.T) {
 }
 
 func TestNewProduct_InvalidType(t *testing.T) {
-	// Arrange
 	invalidTypes := []string{
 		"книги",
 		"мебель",
@@ -49,7 +46,6 @@ func TestNewProduct_InvalidType(t *testing.T) {
 	}
 	receptionID := "reception-123"
 
-	// Act & Assert
 	for _, productType := range invalidTypes {
 		product, err := NewProduct(productType, receptionID)
 

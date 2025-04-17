@@ -6,10 +6,8 @@ import (
 )
 
 func TestNewPVZ_ValidCity(t *testing.T) {
-	// Arrange
 	city := "Москва"
 
-	// Act
 	pvz, err := NewPVZ(city)
 
 	// Assert
@@ -33,7 +31,6 @@ func TestNewPVZ_ValidCity(t *testing.T) {
 }
 
 func TestNewPVZ_InvalidCity(t *testing.T) {
-	// Arrange
 	invalidCities := []string{
 		"Новосибирск",
 		"Красноярск",
@@ -41,7 +38,6 @@ func TestNewPVZ_InvalidCity(t *testing.T) {
 		"",
 	}
 
-	// Act & Assert
 	for _, city := range invalidCities {
 		pvz, err := NewPVZ(city)
 
