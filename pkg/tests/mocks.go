@@ -93,7 +93,7 @@ func (m *MockReceptionRepository) GetByPVZID(ctx context.Context, pvzID string) 
 }
 
 type MockProductRepository struct {
-	products map[string]*domain.Product
+	products          map[string]*domain.Product
 	receptionProducts map[string][]string
 }
 
