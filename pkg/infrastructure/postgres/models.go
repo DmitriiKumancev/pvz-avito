@@ -98,3 +98,23 @@ type UserModel struct {
 	Role         string    `db:"role"`
 	CreatedAt    time.Time `db:"created_at"`
 }
+
+// ToDomain преобразует модель БД в доменную сущность
+func (u *UserModel) ToDomain() domain.User {
+	return domain.User{
+		ID:           u.ID,
+		Email:        u.Email,
+		PasswordHash: u.PasswordHash,
+		Role:         domain.UserRole(u.Role),
+		CreatedAt:    u.CreatedAt,
+	}
+}
+
+// FromDomain преобразует доменную сущность в модель БД
+func (u *UserModel) FromDomain(user domain.User) {
+	u.ID = user.ID
+	u.Email = user.Email
+	u.PasswordHash = user.PasswordHash
+	u.Role = string(user.Role)
+	u.CreatedAt = user.CreatedAt
+}
