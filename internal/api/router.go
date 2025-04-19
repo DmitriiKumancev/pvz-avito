@@ -4,50 +4,88 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dkumancev/avito-pvz/internal/api/middleware"
 	"github.com/dkumancev/avito-pvz/internal/api/v1/handlers"
 	"github.com/dkumancev/avito-pvz/pkg/application/services"
+	"github.com/dkumancev/avito-pvz/pkg/domain"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres"
+	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 )
 
 type Router struct {
-	mux       *http.ServeMux
+	router    *mux.Router
 	db        *sqlx.DB
 	jwtSecret []byte
 }
 
 func NewRouter(db *sqlx.DB, jwtSecret []byte) *Router {
 	return &Router{
-		mux:       http.NewServeMux(),
+		router:    mux.NewRouter(),
 		db:        db,
 		jwtSecret: jwtSecret,
 	}
 }
 
 func (r *Router) Setup() http.Handler {
-	// health check endpoint
-	r.mux.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
+	// Репозитории
+	userRepo := postgres.NewUserRepository(r.db)
+	pvzRepo := postgres.NewPVZRepository(r.db)
+	receptionRepo := postgres.NewReceptionRepository(r.db)
+	productRepo := postgres.NewProductRepository(r.db)
+
+	// Сервисы
+	userService := services.NewUserService(userRepo, r.jwtSecret, 24*time.Hour)
+	pvzService := services.NewPVZService(pvzRepo)
+	receptionService := services.NewReceptionService(pvzRepo, receptionRepo, productRepo)
+
+	// Хендлеры
+	userHandler := handlers.NewUserHandler(userService)
+	pvzHandler := handlers.NewPVZHandler(pvzService, receptionService)
+	receptionHandler := handlers.NewReceptionHandler(receptionService)
+	productHandler := handlers.NewProductHandler(receptionService)
+
+	// Health check
+	r.router.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status": "ok", "db": "connected"}`))
-	})
+	}).Methods(http.MethodGet)
 
-	userRepo := postgres.NewUserRepository(r.db)
+	// Публичные маршруты
+	r.router.HandleFunc("/register", userHandler.Register).Methods(http.MethodPost)
+	r.router.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
+	r.router.HandleFunc("/dummyLogin", userHandler.DummyLogin).Methods(http.MethodPost)
 
-	userService := services.NewUserService(userRepo, r.jwtSecret, 24*time.Hour)
+	// Защищенные маршруты
 
-	userHandler := handlers.NewUserHandler(userService)
+	// ПВЗ - модератор может создавать, все авторизованные могут просматривать
+	r.router.Handle("/pvz", middleware.AuthMiddleware(r.jwtSecret,
+		middleware.RoleMiddleware([]domain.UserRole{domain.ModeratorRole},
+			http.HandlerFunc(pvzHandler.CreatePVZ)))).Methods(http.MethodPost)
 
-	// Register routes
-	r.mux.HandleFunc("/register", userHandler.Register)
-	r.mux.HandleFunc("/login", userHandler.Login)
-	r.mux.HandleFunc("/dummyLogin", userHandler.DummyLogin)
+	r.router.Handle("/pvz", middleware.AuthMiddleware(r.jwtSecret,
+		http.HandlerFunc(pvzHandler.ListPVZ))).Methods(http.MethodGet)
 
-	// Protected routes (добавить позже)
-	// For example:
-	// r.mux.Handle("/pvz", middleware.AuthMiddleware(r.jwtSecret)(
-	//     middleware.RoleMiddleware(domain.ModeratorRole)(
-	//         http.HandlerFunc(pvzHandler.CreatePVZ)))))
+	// Закрытие приемки - только сотрудник
+	r.router.Handle("/pvz/{pvzId}/close_last_reception", middleware.AuthMiddleware(r.jwtSecret,
+		middleware.RoleMiddleware([]domain.UserRole{domain.EmployeeRole},
+			http.HandlerFunc(pvzHandler.CloseLastReception)))).Methods(http.MethodPost)
 
-	return r.mux
+	// Удаление последнего товара - только сотрудник
+	r.router.Handle("/pvz/{pvzId}/delete_last_product", middleware.AuthMiddleware(r.jwtSecret,
+		middleware.RoleMiddleware([]domain.UserRole{domain.EmployeeRole},
+			http.HandlerFunc(pvzHandler.DeleteLastProduct)))).Methods(http.MethodPost)
+
+	// Создание приемки - только сотрудник
+	r.router.Handle("/receptions", middleware.AuthMiddleware(r.jwtSecret,
+		middleware.RoleMiddleware([]domain.UserRole{domain.EmployeeRole},
+			http.HandlerFunc(receptionHandler.CreateReception)))).Methods(http.MethodPost)
+
+	// Добавление товара - только сотрудник
+	r.router.Handle("/products", middleware.AuthMiddleware(r.jwtSecret,
+		middleware.RoleMiddleware([]domain.UserRole{domain.EmployeeRole},
+			http.HandlerFunc(productHandler.AddProduct)))).Methods(http.MethodPost)
+
+	return r.router
 }
