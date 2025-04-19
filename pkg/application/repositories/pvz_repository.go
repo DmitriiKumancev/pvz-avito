@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"time"
 
 	"github.com/dkumancev/avito-pvz/pkg/domain"
 )
@@ -16,8 +17,8 @@ type PVZRepository interface {
 
 // параметры фильтрации для списка ПВЗ
 type PVZFilter struct {
-	StartDate string 
-	EndDate   string 
-	Page      int    
-	Limit     int    
+	ReceptionStartDate *time.Time
+	ReceptionEndDate   *time.Time
+	Page               int
+	Limit              int
 }

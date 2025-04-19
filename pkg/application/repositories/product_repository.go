@@ -7,7 +7,7 @@ import (
 )
 
 type ProductRepository interface {
-	Create(ctx context.Context, product *domain.Product) (*domain.Product, error)
+	Create(ctx context.Context, product *domain.Product, receptionID string) (*domain.Product, error)
 
 	GetByID(ctx context.Context, id string) (*domain.Product, error)
 
