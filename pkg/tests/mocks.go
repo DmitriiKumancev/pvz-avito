@@ -104,11 +104,11 @@ func NewMockProductRepository() *MockProductRepository {
 	}
 }
 
-func (m *MockProductRepository) Create(ctx context.Context, product *domain.Product) (*domain.Product, error) {
+func (m *MockProductRepository) Create(ctx context.Context, product *domain.Product, receptionID string) (*domain.Product, error) {
 	product.ID = "mock-product-id-" + product.Type
 	m.products[product.ID] = product
 
-	m.receptionProducts[product.ReceptionID] = append(m.receptionProducts[product.ReceptionID], product.ID)
+	m.receptionProducts[receptionID] = append(m.receptionProducts[receptionID], product.ID)
 
 	return product, nil
 }
@@ -147,4 +147,42 @@ func (m *MockProductRepository) DeleteLastByReceptionID(ctx context.Context, rec
 	delete(m.products, lastProductID)
 
 	return nil
+}
+
+type MockUserRepository struct {
+	users map[string]*domain.User
+}
+
+func NewMockUserRepository() *MockUserRepository {
+	return &MockUserRepository{
+		users: make(map[string]*domain.User),
+	}
+}
+
+func (m *MockUserRepository) Create(ctx context.Context, user domain.User) (domain.User, error) {
+	user.ID = "mock-user-id"
+	m.users[user.Email] = &user
+	return user, nil
+}
+
+func (m *MockUserRepository) GetByID(ctx context.Context, id string) (domain.User, error) {
+	for _, user := range m.users {
+		if user.ID == id {
+			return *user, nil
+		}
+	}
+	return domain.User{}, errors.New("user not found")
+}
+
+func (m *MockUserRepository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
+	user, ok := m.users[email]
+	if !ok {
+		return domain.User{}, errors.New("user not found")
+	}
+	return *user, nil
+}
+
+func (m *MockUserRepository) Exists(ctx context.Context, email string) (bool, error) {
+	_, ok := m.users[email]
+	return ok, nil
 }
