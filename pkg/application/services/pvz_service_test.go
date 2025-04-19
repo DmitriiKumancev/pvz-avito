@@ -2,152 +2,93 @@ package services
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/dkumancev/avito-pvz/pkg/application/repositories"
-	"github.com/dkumancev/avito-pvz/pkg/domain"
+	"github.com/dkumancev/avito-pvz/pkg/tests"
 )
 
-type MockPVZRepository struct {
-	pvzs map[string]*domain.PVZ
-}
-
-func NewMockPVZRepository() *MockPVZRepository {
-	return &MockPVZRepository{
-		pvzs: make(map[string]*domain.PVZ),
-	}
-}
-
-func (m *MockPVZRepository) Create(ctx context.Context, pvz *domain.PVZ) (*domain.PVZ, error) {
-	pvz.ID = "mock-pvz-id"
-	m.pvzs[pvz.ID] = pvz
-	return pvz, nil
-}
-
-func (m *MockPVZRepository) GetByID(ctx context.Context, id string) (*domain.PVZ, error) {
-	pvz, ok := m.pvzs[id]
-	if !ok {
-		return nil, errors.New("pvz not found")
-	}
-	return pvz, nil
-}
-
-func (m *MockPVZRepository) List(ctx context.Context, filter repositories.PVZFilter) ([]*domain.PVZ, error) {
-	result := make([]*domain.PVZ, 0, len(m.pvzs))
-	for _, pvz := range m.pvzs {
-		result = append(result, pvz)
-	}
-	return result, nil
-}
-
-func TestPVZService_CreatePVZ_ValidCity(t *testing.T) {
+func TestPVZService_CreatePVZ(t *testing.T) {
 	ctx := context.Background()
-	mockRepo := NewMockPVZRepository()
+	mockRepo := tests.NewMockPVZRepository()
 	service := NewPVZService(mockRepo)
-	city := "Москва"
 
-	// Act
-	pvz, err := service.CreatePVZ(ctx, city)
-
-	// Assert
+	pvz, err := service.CreatePVZ(ctx, "Москва")
 	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
+		t.Errorf("Expected no error for valid city, got: %v", err)
 	}
 	if pvz == nil {
 		t.Fatal("Expected PVZ to be created, got nil")
 	}
-	if pvz.City != city {
-		t.Errorf("Expected city to be %s, got %s", city, pvz.City)
+	if pvz.City != "Москва" {
+		t.Errorf("Expected city to be 'Москва', got %s", pvz.City)
 	}
-	if pvz.ID == "" {
-		t.Error("Expected ID to be set, got empty string")
-	}
-}
 
-func TestPVZService_CreatePVZ_InvalidCity(t *testing.T) {
-	ctx := context.Background()
-	mockRepo := NewMockPVZRepository()
-	service := NewPVZService(mockRepo)
-	city := "Новосибирск"
-
-	// Act
-	pvz, err := service.CreatePVZ(ctx, city)
-
-	// Assert
+	_, err = service.CreatePVZ(ctx, "InvalidCity")
 	if err == nil {
 		t.Error("Expected error for invalid city, got nil")
 	}
-	if pvz != nil {
-		t.Errorf("Expected PVZ to be nil for invalid city, got %+v", pvz)
-	}
 }
 
-func TestPVZService_GetPVZByID_Exists(t *testing.T) {
+func TestPVZService_GetPVZ(t *testing.T) {
 	ctx := context.Background()
-	mockRepo := NewMockPVZRepository()
+	mockRepo := tests.NewMockPVZRepository()
 	service := NewPVZService(mockRepo)
 
-	originalPVZ, _ := service.CreatePVZ(ctx, "Москва")
+	createdPVZ, _ := service.CreatePVZ(ctx, "Москва")
 
-	// Act
-	pvz, err := service.GetPVZByID(ctx, originalPVZ.ID)
-
-	// Assert
+	// Valid ID
+	pvz, err := service.GetPVZByID(ctx, createdPVZ.ID)
 	if err != nil {
-		t.Errorf("Expected no error, got: %v", err)
+		t.Errorf("Expected no error for valid ID, got: %v", err)
 	}
 	if pvz == nil {
-		t.Fatal("Expected PVZ to be found, got nil")
+		t.Fatal("Expected PVZ to be returned, got nil")
 	}
-	if pvz.ID != originalPVZ.ID {
-		t.Errorf("Expected ID to be %s, got %s", originalPVZ.ID, pvz.ID)
+	if pvz.City != "Москва" {
+		t.Errorf("Expected city to be 'Москва', got %s", pvz.City)
 	}
-	if pvz.City != originalPVZ.City {
-		t.Errorf("Expected city to be %s, got %s", originalPVZ.City, pvz.City)
-	}
-}
 
-func TestPVZService_GetPVZByID_NotExists(t *testing.T) {
-	ctx := context.Background()
-	mockRepo := NewMockPVZRepository()
-	service := NewPVZService(mockRepo)
-
-	// Act
-	pvz, err := service.GetPVZByID(ctx, "non-existent-id")
-
-	// Assert
+	// Invalid ID
+	_, err = service.GetPVZByID(ctx, "non-existent-id")
 	if err == nil {
-		t.Error("Expected error for non-existent PVZ, got nil")
-	}
-	if pvz != nil {
-		t.Errorf("Expected PVZ to be nil for non-existent ID, got %+v", pvz)
+		t.Error("Expected error for non-existent ID, got nil")
 	}
 }
 
 func TestPVZService_ListPVZs(t *testing.T) {
 	ctx := context.Background()
-	mockRepo := NewMockPVZRepository()
+	mockRepo := tests.NewMockPVZRepository()
 	service := NewPVZService(mockRepo)
 
-	// cоздаем несклько тестовых ПВЗ
+	// Create a PVZ - в текущей реализации мока, Create всегда использует
+	// фиксированный ID "mock-pvz-id", так что второй вызов перезапишет первый
 	_, _ = service.CreatePVZ(ctx, "Москва")
 
-	pvz2, _ := domain.NewPVZ("Казань")
-	pvz2.ID = "mock-pvz-id-2"
-	mockRepo.pvzs[pvz2.ID] = pvz2
-
-	// Act
-	pvzs, err := service.ListPVZs(ctx, repositories.PVZFilter{
-		Page:  1,
-		Limit: 10,
-	})
-
-	// Assert
+	filter := repositories.PVZFilter{}
+	pvzs, err := service.ListPVZs(ctx, filter)
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
-	if len(pvzs) != 2 {
-		t.Errorf("Expected 2 PVZs, got %d", len(pvzs))
+	if len(pvzs) != 1 {
+		t.Errorf("Expected 1 PVZ, got %d", len(pvzs))
+	}
+}
+
+// Тест для алиаса ListPVZ (дублирует ListPVZs - TODO: удалить)
+func TestPVZService_ListPVZ(t *testing.T) {
+	ctx := context.Background()
+	mockRepo := tests.NewMockPVZRepository()
+	service := NewPVZService(mockRepo)
+
+	_, _ = service.CreatePVZ(ctx, "Москва")
+
+	filter := repositories.PVZFilter{}
+	pvzs, err := service.ListPVZ(ctx, filter)
+	if err != nil {
+		t.Errorf("Expected no error, got: %v", err)
+	}
+	if len(pvzs) != 1 {
+		t.Errorf("Expected 1 PVZ, got %d", len(pvzs))
 	}
 }

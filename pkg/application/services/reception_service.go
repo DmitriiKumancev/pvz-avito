@@ -16,6 +16,13 @@ type ReceptionService interface {
 	AddProduct(ctx context.Context, pvzID string, productType string) (*domain.Product, error)
 
 	RemoveLastProduct(ctx context.Context, pvzID string) error
+
+	// Алиас для DeleteLastProduct - для совместимости с хендлерами
+	DeleteLastProduct(ctx context.Context, pvzID string) error
+
+	GetReceptionsByPVZID(ctx context.Context, pvzID string) ([]*domain.Reception, error)
+
+	GetProductsByReceptionID(ctx context.Context, receptionID string) ([]*domain.Product, error)
 }
 
 type ReceptionServiceImpl struct {
@@ -99,7 +106,7 @@ func (s *ReceptionServiceImpl) AddProduct(ctx context.Context, pvzID string, pro
 		return nil, err
 	}
 
-	product, err = s.productRepo.Create(ctx, product)
+	product, err = s.productRepo.Create(ctx, product, reception.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -128,4 +135,21 @@ func (s *ReceptionServiceImpl) RemoveLastProduct(ctx context.Context, pvzID stri
 	}
 
 	return reception.RemoveLastProduct()
+}
+
+func (s *ReceptionServiceImpl) DeleteLastProduct(ctx context.Context, pvzID string) error {
+	return s.RemoveLastProduct(ctx, pvzID)
+}
+
+func (s *ReceptionServiceImpl) GetReceptionsByPVZID(ctx context.Context, pvzID string) ([]*domain.Reception, error) {
+	_, err := s.pvzRepo.GetByID(ctx, pvzID)
+	if err != nil {
+		return nil, errors.New("ПВЗ не найден")
+	}
+
+	return s.receptionRepo.GetByPVZID(ctx, pvzID)
+}
+
+func (s *ReceptionServiceImpl) GetProductsByReceptionID(ctx context.Context, receptionID string) ([]*domain.Product, error) {
+	return s.productRepo.GetByReceptionID(ctx, receptionID)
 }

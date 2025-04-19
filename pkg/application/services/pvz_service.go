@@ -14,6 +14,9 @@ type PVZService interface {
 	GetPVZByID(ctx context.Context, id string) (*domain.PVZ, error)
 
 	ListPVZs(ctx context.Context, filter repositories.PVZFilter) ([]*domain.PVZ, error)
+
+	// Алиас для совместимости с хендлерами
+	ListPVZ(ctx context.Context, filter repositories.PVZFilter) ([]*domain.PVZ, error)
 }
 
 type PVZServiceImpl struct {
@@ -56,4 +59,9 @@ func (s *PVZServiceImpl) ListPVZs(ctx context.Context, filter repositories.PVZFi
 	}
 
 	return s.pvzRepo.List(ctx, filter)
+}
+
+// ListPVZ - алиас для ListPVZs для совместимости с хендлерами
+func (s *PVZServiceImpl) ListPVZ(ctx context.Context, filter repositories.PVZFilter) ([]*domain.PVZ, error) {
+	return s.ListPVZs(ctx, filter)
 }

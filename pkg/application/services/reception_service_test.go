@@ -2,129 +2,23 @@ package services
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/dkumancev/avito-pvz/pkg/domain"
+	"github.com/dkumancev/avito-pvz/pkg/tests"
 )
-
-type MockReceptionRepository struct {
-	receptions map[string]*domain.Reception
-}
-
-func NewMockReceptionRepository() *MockReceptionRepository {
-	return &MockReceptionRepository{
-		receptions: make(map[string]*domain.Reception),
-	}
-}
-
-func (m *MockReceptionRepository) Create(ctx context.Context, reception *domain.Reception) (*domain.Reception, error) {
-	reception.ID = "mock-reception-id"
-	m.receptions[reception.ID] = reception
-	return reception, nil
-}
-
-func (m *MockReceptionRepository) GetByID(ctx context.Context, id string) (*domain.Reception, error) {
-	reception, ok := m.receptions[id]
-	if !ok {
-		return nil, errors.New("reception not found")
-	}
-	return reception, nil
-}
-
-func (m *MockReceptionRepository) Update(ctx context.Context, reception *domain.Reception) error {
-	if _, ok := m.receptions[reception.ID]; !ok {
-		return errors.New("reception not found")
-	}
-	m.receptions[reception.ID] = reception
-	return nil
-}
-
-func (m *MockReceptionRepository) GetLastActiveByPVZID(ctx context.Context, pvzID string) (*domain.Reception, error) {
-	for _, reception := range m.receptions {
-		if reception.PVZID == pvzID && reception.IsActive() {
-			return reception, nil
-		}
-	}
-	return nil, errors.New("active reception not found")
-}
-
-func (m *MockReceptionRepository) GetByPVZID(ctx context.Context, pvzID string) ([]*domain.Reception, error) {
-	var result []*domain.Reception
-	for _, reception := range m.receptions {
-		if reception.PVZID == pvzID {
-			result = append(result, reception)
-		}
-	}
-	return result, nil
-}
-
-type MockProductRepository struct {
-	products map[string]*domain.Product
-	// Для каждой приемки список ID товаров в порядке добавления (для LIFO)
-	receptionProducts map[string][]string
-}
-
-func NewMockProductRepository() *MockProductRepository {
-	return &MockProductRepository{
-		products:          make(map[string]*domain.Product),
-		receptionProducts: make(map[string][]string),
-	}
-}
-
-func (m *MockProductRepository) Create(ctx context.Context, product *domain.Product) (*domain.Product, error) {
-	product.ID = "mock-product-id-" + product.Type
-	m.products[product.ID] = product
-
-	m.receptionProducts[product.ReceptionID] = append(m.receptionProducts[product.ReceptionID], product.ID)
-
-	return product, nil
-}
-
-func (m *MockProductRepository) GetByID(ctx context.Context, id string) (*domain.Product, error) {
-	product, ok := m.products[id]
-	if !ok {
-		return nil, errors.New("product not found")
-	}
-	return product, nil
-}
-
-func (m *MockProductRepository) GetByReceptionID(ctx context.Context, receptionID string) ([]*domain.Product, error) {
-	var result []*domain.Product
-	for _, productID := range m.receptionProducts[receptionID] {
-		if product, ok := m.products[productID]; ok {
-			result = append(result, product)
-		}
-	}
-	return result, nil
-}
-
-func (m *MockProductRepository) DeleteLastByReceptionID(ctx context.Context, receptionID string) error {
-	productIDs := m.receptionProducts[receptionID]
-	if len(productIDs) == 0 {
-		return errors.New("no products to delete")
-	}
-
-	lastProductID := productIDs[len(productIDs)-1]
-
-	m.receptionProducts[receptionID] = productIDs[:len(productIDs)-1]
-
-	delete(m.products, lastProductID)
-
-	return nil
-}
 
 func TestReceptionService_CreateReception(t *testing.T) {
 	ctx := context.Background()
-	mockPVZRepo := NewMockPVZRepository()
-	mockReceptionRepo := NewMockReceptionRepository()
-	mockProductRepo := NewMockProductRepository()
+	mockPVZRepo := tests.NewMockPVZRepository()
+	mockReceptionRepo := tests.NewMockReceptionRepository()
+	mockProductRepo := tests.NewMockProductRepository()
 
 	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
 
 	pvz, _ := domain.NewPVZ("Москва")
 	pvz.ID = "pvz-123"
-	mockPVZRepo.pvzs[pvz.ID] = pvz
+	mockPVZRepo.Create(ctx, pvz)
 
 	// Act
 	reception, err := service.CreateReception(ctx, pvz.ID)
@@ -152,15 +46,15 @@ func TestReceptionService_CreateReception(t *testing.T) {
 
 func TestReceptionService_CloseReception(t *testing.T) {
 	ctx := context.Background()
-	mockPVZRepo := NewMockPVZRepository()
-	mockReceptionRepo := NewMockReceptionRepository()
-	mockProductRepo := NewMockProductRepository()
+	mockPVZRepo := tests.NewMockPVZRepository()
+	mockReceptionRepo := tests.NewMockReceptionRepository()
+	mockProductRepo := tests.NewMockProductRepository()
 
 	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
 
 	pvz, _ := domain.NewPVZ("Москва")
 	pvz.ID = "pvz-123"
-	mockPVZRepo.pvzs[pvz.ID] = pvz
+	mockPVZRepo.Create(ctx, pvz)
 
 	_, _ = service.CreateReception(ctx, pvz.ID)
 
@@ -187,15 +81,15 @@ func TestReceptionService_CloseReception(t *testing.T) {
 
 func TestReceptionService_AddAndRemoveProduct(t *testing.T) {
 	ctx := context.Background()
-	mockPVZRepo := NewMockPVZRepository()
-	mockReceptionRepo := NewMockReceptionRepository()
-	mockProductRepo := NewMockProductRepository()
+	mockPVZRepo := tests.NewMockPVZRepository()
+	mockReceptionRepo := tests.NewMockReceptionRepository()
+	mockProductRepo := tests.NewMockProductRepository()
 
 	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
 
 	pvz, _ := domain.NewPVZ("Москва")
 	pvz.ID = "pvz-123"
-	mockPVZRepo.pvzs[pvz.ID] = pvz
+	mockPVZRepo.Create(ctx, pvz)
 
 	reception, _ := service.CreateReception(ctx, pvz.ID)
 
@@ -243,5 +137,49 @@ func TestReceptionService_AddAndRemoveProduct(t *testing.T) {
 	err = service.RemoveLastProduct(ctx, pvz.ID)
 	if err == nil {
 		t.Error("Expected error when removing product from closed reception, got nil")
+	}
+}
+
+func TestReceptionService_GetReceptionsAndProducts(t *testing.T) {
+	ctx := context.Background()
+	mockPVZRepo := tests.NewMockPVZRepository()
+	mockReceptionRepo := tests.NewMockReceptionRepository()
+	mockProductRepo := tests.NewMockProductRepository()
+
+	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
+
+	// Подготавливаем данные
+	pvz, _ := domain.NewPVZ("Москва")
+	pvz.ID = "pvz-123"
+	mockPVZRepo.Create(ctx, pvz)
+
+	reception, _ := service.CreateReception(ctx, pvz.ID)
+	_, _ = service.AddProduct(ctx, pvz.ID, domain.ProductTypeElectronics)
+	_, _ = service.AddProduct(ctx, pvz.ID, domain.ProductTypeClothes)
+
+	receptions, err := service.GetReceptionsByPVZID(ctx, pvz.ID)
+	if err != nil {
+		t.Errorf("Expected no error when getting receptions, got: %v", err)
+	}
+	if len(receptions) != 1 {
+		t.Errorf("Expected 1 reception, got %d", len(receptions))
+	}
+
+	products, err := service.GetProductsByReceptionID(ctx, reception.ID)
+	if err != nil {
+		t.Errorf("Expected no error when getting products, got: %v", err)
+	}
+	if len(products) != 2 {
+		t.Errorf("Expected 2 products, got %d", len(products))
+	}
+
+	err = service.DeleteLastProduct(ctx, pvz.ID)
+	if err != nil {
+		t.Errorf("Expected no error when deleting last product, got: %v", err)
+	}
+
+	products, _ = service.GetProductsByReceptionID(ctx, reception.ID)
+	if len(products) != 1 {
+		t.Errorf("Expected 1 product after deletion, got %d", len(products))
 	}
 }
