@@ -2,10 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
-	"github.com/dkumancev/avito-pvz/internal/api/response"
 	"github.com/dkumancev/avito-pvz/pkg/application/services"
 	"github.com/dkumancev/avito-pvz/pkg/domain"
 )
@@ -14,16 +12,10 @@ type UserHandler struct {
 	userService services.UserService
 }
 
-func NewUserHandler(userService services.UserService) *UserHandler {
-	return &UserHandler{
-		userService: userService,
-	}
-}
-
 type RegisterRequest struct {
-	Email    string          `json:"email"`
-	Password string          `json:"password"`
-	Role     domain.UserRole `json:"role"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 type LoginRequest struct {
@@ -32,100 +24,124 @@ type LoginRequest struct {
 }
 
 type DummyLoginRequest struct {
-	Role domain.UserRole `json:"role"`
+	Role string `json:"role"`
+}
+
+type UserResponse struct {
+	ID    string `json:"id"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
+}
+
+type TokenResponse struct {
+	Token string `json:"token"`
+}
+
+func NewUserHandler(userService services.UserService) *UserHandler {
+	return &UserHandler{
+		userService: userService,
+	}
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+		http.Error(w, `{"message":"Метод не поддерживается"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Invalid request payload")
+		http.Error(w, `{"message":"Неверный формат запроса"}`, http.StatusBadRequest)
 		return
 	}
 
-	if req.Email == "" || req.Password == "" {
-		response.Error(w, http.StatusBadRequest, "Email and password are required")
+	var role domain.UserRole
+	switch req.Role {
+	case "employee":
+		role = domain.EmployeeRole
+	case "moderator":
+		role = domain.ModeratorRole
+	default:
+		http.Error(w, `{"message":"Неверная роль пользователя"}`, http.StatusBadRequest)
 		return
 	}
 
-	if req.Role != domain.EmployeeRole && req.Role != domain.ModeratorRole {
-		response.Error(w, http.StatusBadRequest, "Invalid role")
-		return
-	}
-
-	user, err := h.userService.Register(r.Context(), req.Email, req.Password, req.Role)
+	user, err := h.userService.Register(r.Context(), req.Email, req.Password, role)
 	if err != nil {
-		if errors.Is(err, services.ErrUserAlreadyExists) {
-			response.Error(w, http.StatusBadRequest, "User with this email already exists")
-			return
-		}
-		response.Error(w, http.StatusInternalServerError, "Failed to register user")
+		http.Error(w, `{"message":"`+err.Error()+`"}`, http.StatusBadRequest)
 		return
 	}
 
-	response.JSON(w, http.StatusCreated, map[string]interface{}{
-		"id":    user.ID,
-		"email": user.Email,
-		"role":  user.Role,
-	})
+	resp := UserResponse{
+		ID:    user.ID,
+		Email: user.Email,
+		Role:  string(user.Role),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+		http.Error(w, `{"message":"Метод не поддерживается"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Invalid request payload")
-		return
-	}
-
-	if req.Email == "" || req.Password == "" {
-		response.Error(w, http.StatusBadRequest, "Email and password are required")
+		http.Error(w, `{"message":"Неверный формат запроса"}`, http.StatusBadRequest)
 		return
 	}
 
 	token, err := h.userService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		if errors.Is(err, services.ErrInvalidCredentials) {
-			response.Error(w, http.StatusUnauthorized, "Invalid credentials")
-			return
-		}
-		response.Error(w, http.StatusInternalServerError, "Failed to authenticate user")
+		http.Error(w, `{"message":"Неверные учетные данные"}`, http.StatusUnauthorized)
 		return
 	}
 
-	response.JSON(w, http.StatusOK, token)
+	resp := TokenResponse{
+		Token: token,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *UserHandler) DummyLogin(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		response.Error(w, http.StatusMethodNotAllowed, "Method not allowed")
+		http.Error(w, `{"message":"Метод не поддерживается"}`, http.StatusMethodNotAllowed)
 		return
 	}
 
 	var req DummyLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		response.Error(w, http.StatusBadRequest, "Invalid request payload")
+		http.Error(w, `{"message":"Неверный формат запроса"}`, http.StatusBadRequest)
 		return
 	}
 
-	if req.Role != domain.EmployeeRole && req.Role != domain.ModeratorRole {
-		response.Error(w, http.StatusBadRequest, "Invalid role")
+	var role domain.UserRole
+	switch req.Role {
+	case "employee":
+		role = domain.EmployeeRole
+	case "moderator":
+		role = domain.ModeratorRole
+	default:
+		http.Error(w, `{"message":"Неверная роль пользователя"}`, http.StatusBadRequest)
 		return
 	}
 
-	token, err := h.userService.DummyLogin(r.Context(), req.Role)
+	token, err := h.userService.DummyLogin(r.Context(), role)
 	if err != nil {
-		response.Error(w, http.StatusInternalServerError, "Failed to generate dummy token")
+		http.Error(w, `{"message":"Ошибка при создании токена"}`, http.StatusInternalServerError)
 		return
 	}
 
-	response.JSON(w, http.StatusOK, token)
+	resp := TokenResponse{
+		Token: token,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
