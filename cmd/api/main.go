@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dkumancev/avito-pvz/config"
+	"github.com/dkumancev/avito-pvz/internal/api"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres"
 )
 
@@ -30,17 +30,12 @@ func main() {
 
 	log.Println("Успешное подключение к базе данных")
 
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"status": "ok", "db": "connected"}`)
-	})
+	router := api.NewRouter(db, []byte(cfg.Auth.JWTSecret))
+	handler := router.Setup()
 
 	server := &http.Server{
 		Addr:         ":" + cfg.HTTP.Port,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  cfg.HTTP.Timeout,
 		WriteTimeout: cfg.HTTP.Timeout,
 		IdleTimeout:  cfg.HTTP.Timeout,
