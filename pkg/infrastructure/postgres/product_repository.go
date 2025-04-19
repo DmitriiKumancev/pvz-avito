@@ -131,7 +131,7 @@ func (r *ProductRepository) DeleteByID(ctx context.Context, id string) error {
 		return fmt.Errorf("ошибка при удалении товара: %w", err)
 	}
 
-	// check на удаление записи 
+	// check на удаление записи
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("ошибка получения количества удаленных записей: %w", err)
@@ -139,6 +139,76 @@ func (r *ProductRepository) DeleteByID(ctx context.Context, id string) error {
 
 	if rowsAffected == 0 {
 		return fmt.Errorf("товар с ID %s не найден", id)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("ошибка фиксации транзакции: %w", err)
+	}
+
+	return nil
+}
+
+func (r *ProductRepository) GetByReceptionID(ctx context.Context, receptionID string) ([]*domain.Product, error) {
+	query := `
+		SELECT p.id, p.date_time, p.type, p.reception_id
+		FROM product p
+		JOIN product_sequence ps ON p.id = ps.product_id
+		WHERE p.reception_id = $1
+		ORDER BY ps.id
+	`
+
+	var models []ProductModel
+	err := r.db.SelectContext(ctx, &models, query, receptionID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при получении товаров для приемки: %w", err)
+	}
+
+	result := make([]*domain.Product, 0, len(models))
+	for _, model := range models {
+		product := model.ToEntity()
+		result = append(result, product)
+	}
+
+	return result, nil
+}
+
+func (r *ProductRepository) DeleteLastByReceptionID(ctx context.Context, receptionID string) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("ошибка начала транзакции: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var productID string
+	query := `
+		SELECT ps.product_id
+		FROM product_sequence ps
+		WHERE ps.reception_id = $1
+		ORDER BY ps.id DESC
+		LIMIT 1
+	`
+	err = tx.GetContext(ctx, &productID, query, receptionID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("товары для приемки с ID %s не найдены", receptionID)
+		}
+		return fmt.Errorf("ошибка при получении последнего товара: %w", err)
+	}
+
+	// удаляем товар из очереди товаров
+	_, err = tx.ExecContext(ctx, "DELETE FROM product_sequence WHERE product_id = $1", productID)
+	if err != nil {
+		return fmt.Errorf("ошибка при удалении товара из очереди: %w", err)
+	}
+
+	// Удаляем сам товар
+	_, err = tx.ExecContext(ctx, "DELETE FROM product WHERE id = $1", productID)
+	if err != nil {
+		return fmt.Errorf("ошибка при удалении товара: %w", err)
 	}
 
 	if err = tx.Commit(); err != nil {
@@ -163,7 +233,6 @@ func (r *ProductRepository) ListByReceptionID(ctx context.Context, receptionID s
 		return nil, fmt.Errorf("ошибка при получении товаров для приемки: %w", err)
 	}
 
-	// преобразование моделей в доменные сущности
 	result := make([]domain.Product, 0, len(models))
 	for _, model := range models {
 		product := model.ToEntity()
@@ -192,7 +261,6 @@ func (r *ProductRepository) GetLastAddedProduct(ctx context.Context, receptionID
 		return nil, fmt.Errorf("ошибка при получении последнего товара: %w", err)
 	}
 
-	// модель обратно в доменную сущность
 	result := model.ToEntity()
 	return result, nil
 }
