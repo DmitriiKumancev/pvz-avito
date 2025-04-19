@@ -1,0 +1,207 @@
+# API тесты для сервиса управления ПВЗ
+
+@baseUrl = http://localhost:8080
+@employeeToken = {{dummyLoginEmployee.response.body.token}}
+@moderatorToken = {{dummyLoginModerator.response.body.token}}
+
+### Health check
+GET {{baseUrl}}/health
+Accept: application/json
+
+### ===== Аутентификация и авторизация =====
+
+### Регистрация нового сотрудника
+# @name registerEmployee
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+  "email": "employee@example.com",
+  "password": "password123",
+  "role": "employee"
+}
+
+### Регистрация нового модератора
+# @name registerModerator
+POST {{baseUrl}}/register
+Content-Type: application/json
+
+{
+  "email": "moderator@example.com",
+  "password": "password123",
+  "role": "moderator"
+}
+
+### Логин сотрудника
+# @name loginEmployee
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "employee@example.com",
+  "password": "password123"
+}
+
+### Логин модератора
+# @name loginModerator
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "moderator@example.com",
+  "password": "password123"
+}
+
+### Тестовый токен сотрудника (без регистрации)
+# @name dummyLoginEmployee
+POST {{baseUrl}}/dummyLogin
+Content-Type: application/json
+
+{
+  "role": "employee"
+}
+
+### Тестовый токен модератора (без регистрации)
+# @name dummyLoginModerator
+POST {{baseUrl}}/dummyLogin
+Content-Type: application/json
+
+{
+  "role": "moderator"
+}
+
+### ===== Управление ПВЗ (только для модераторов) =====
+
+### Создание ПВЗ (требуется токен модератора)
+# @name createPVZ
+POST {{baseUrl}}/pvz
+Authorization: Bearer {{moderatorToken}}
+Content-Type: application/json
+
+{
+  "city": "Москва"
+}
+
+### Попытка создания ПВЗ с токеном сотрудника (должен вернуть 403 Forbidden)
+POST {{baseUrl}}/pvz
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "city": "Москва"
+}
+
+### Создание ПВЗ в городе, который не поддерживается (должен вернуть ошибку)
+POST {{baseUrl}}/pvz
+Authorization: Bearer {{moderatorToken}}
+Content-Type: application/json
+
+{
+  "city": "Новосибирск"
+}
+
+### Получение списка ПВЗ с фильтрацией
+# @name getPVZList
+GET {{baseUrl}}/pvz?page=1&limit=10
+Authorization: Bearer {{employeeToken}}
+Accept: application/json
+
+### Получение списка ПВЗ с фильтрацией по дате
+GET {{baseUrl}}/pvz?page=1&limit=10&startDate=2023-01-01T00:00:00Z&endDate=2024-12-31T23:59:59Z
+Authorization: Bearer {{employeeToken}}
+Accept: application/json
+
+### ===== Управление приемками товаров (только для сотрудников) =====
+
+### Создание новой приемки товаров
+# @name createReception
+POST {{baseUrl}}/receptions
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "pvzId": "{{createPVZ.response.body.id}}"
+}
+
+### Попытка создания приемки модератором (должен вернуть 403 Forbidden)
+POST {{baseUrl}}/receptions
+Authorization: Bearer {{moderatorToken}}
+Content-Type: application/json
+
+{
+  "pvzId": "{{createPVZ.response.body.id}}"
+}
+
+### Закрытие последней открытой приемки
+# @name closeLastReception
+POST {{baseUrl}}/pvz/{{createPVZ.response.body.id}}/close_last_reception
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+### Попытка закрытия приемки модератором (должен вернуть 403 Forbidden)
+POST {{baseUrl}}/pvz/{{createPVZ.response.body.id}}/close_last_reception
+Authorization: Bearer {{moderatorToken}}
+Content-Type: application/json
+
+### ===== Управление товарами (только для сотрудников) =====
+
+### Добавление товара электроники в текущую приемку
+# @name addElectronicsProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "type": "electronics",
+  "pvzId": "{{createPVZ.response.body.id}}"
+}
+
+### Добавление товара одежды в текущую приемку
+# @name addClothesProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "type": "clothes",
+  "pvzId": "{{createPVZ.response.body.id}}"
+}
+
+### Добавление товара обуви в текущую приемку
+# @name addShoesProduct
+POST {{baseUrl}}/products
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+{
+  "type": "shoes",
+  "pvzId": "{{createPVZ.response.body.id}}"
+}
+
+### Попытка добавления товара модератором (должен вернуть 403 Forbidden)
+POST {{baseUrl}}/products
+Authorization: Bearer {{moderatorToken}}
+Content-Type: application/json
+
+{
+  "type": "electronics",
+  "pvzId": "{{createPVZ.response.body.id}}"
+}
+
+### Удаление последнего добавленного товара (LIFO)
+# @name deleteLastProduct
+POST {{baseUrl}}/pvz/{{createPVZ.response.body.id}}/delete_last_product
+Authorization: Bearer {{employeeToken}}
+Content-Type: application/json
+
+### Попытка удаления товара модератором (должен вернуть 403 Forbidden)
+POST {{baseUrl}}/pvz/{{createPVZ.response.body.id}}/delete_last_product
+Authorization: Bearer {{moderatorToken}}
+Content-Type: application/json
+
+### Тестовый сценарий: создание нескольких товаров и закрытие приемки
+# 1. Создаем ПВЗ (как модератор)
+# 2. Создаем приемку (как сотрудник)
+# 3. Добавляем товары (как сотрудник) 
+# 4. Закрываем приемку (как сотрудник)
+# 5. Проверяем, что нельзя добавить товар в закрытую приемку
