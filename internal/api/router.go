@@ -8,7 +8,10 @@ import (
 	"github.com/dkumancev/avito-pvz/internal/api/v1/handlers"
 	"github.com/dkumancev/avito-pvz/pkg/application/services"
 	"github.com/dkumancev/avito-pvz/pkg/domain"
-	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/product"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/pvz"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/reception"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/user"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
 )
@@ -29,10 +32,10 @@ func NewRouter(db *sqlx.DB, jwtSecret []byte) *Router {
 
 func (r *Router) Setup() http.Handler {
 	// Репозитории
-	userRepo := postgres.NewUserRepository(r.db)
-	pvzRepo := postgres.NewPVZRepository(r.db)
-	receptionRepo := postgres.NewReceptionRepository(r.db)
-	productRepo := postgres.NewProductRepository(r.db)
+	userRepo := user.New(r.db)
+	pvzRepo := pvz.New(r.db)
+	receptionRepo := reception.New(r.db)
+	productRepo := product.New(r.db)
 
 	// Сервисы
 	userService := services.NewUserService(userRepo, r.jwtSecret, 24*time.Hour)

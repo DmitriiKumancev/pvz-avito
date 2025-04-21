@@ -11,7 +11,7 @@ import (
 
 	"github.com/dkumancev/avito-pvz/config"
 	"github.com/dkumancev/avito-pvz/internal/api"
-	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/db"
 )
 
 func main() {
@@ -22,15 +22,15 @@ func main() {
 
 	log.Printf("Сервис для управления ПВЗ (Среда: %s)", cfg.App.Environment)
 
-	db, err := postgres.NewPostgresDB(cfg.Postgres)
+	dbConn, err := db.New(cfg.Postgres)
 	if err != nil {
 		log.Fatalf("Ошибка подключения к базе данных: %v", err)
 	}
-	defer db.Close()
+	defer dbConn.Close()
 
 	log.Println("Успешное подключение к базе данных")
 
-	router := api.NewRouter(db, []byte(cfg.Auth.JWTSecret))
+	router := api.NewRouter(dbConn, []byte(cfg.Auth.JWTSecret))
 	handler := router.Setup()
 
 	server := &http.Server{
