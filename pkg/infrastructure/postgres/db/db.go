@@ -1,17 +1,17 @@
-package postgres
+package db
 
 import (
 	"fmt"
 
 	"github.com/dkumancev/avito-pvz/config"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" 
+	_ "github.com/lib/pq"
 )
 
-func NewPostgresDB(cfg config.PostgresConfig) (*sqlx.DB, error) {
+func New(cfg config.PostgresConfig) (*sqlx.DB, error) {
 	db, err := sqlx.Connect("postgres", cfg.ConnURI())
 	if err != nil {
-		return nil, fmt.Errorf("ошибка подключения к PostgreSQL: %w", err)
+		return nil, fmt.Errorf("error connecting to PostgreSQL: %w", err)
 	}
 
 	db.SetMaxOpenConns(cfg.MaxOpenConns)
@@ -20,7 +20,7 @@ func NewPostgresDB(cfg config.PostgresConfig) (*sqlx.DB, error) {
 	db.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
 
 	if err = db.Ping(); err != nil {
-		return nil, fmt.Errorf("ошибка проверки соединения с PostgreSQL: %w", err)
+		return nil, fmt.Errorf("error checking connection to PostgreSQL: %w", err)
 	}
 
 	return db, nil
