@@ -10,6 +10,7 @@ import (
 	"github.com/dkumancev/avito-pvz/pkg/application/services"
 	"github.com/dkumancev/avito-pvz/pkg/domain"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/logger"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/metrics"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/product"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/pvz"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/reception"
@@ -23,6 +24,7 @@ type Router struct {
 	db        *sqlx.DB
 	jwtSecret []byte
 	logger    *slog.Logger
+	metrics   *metrics.HTTPMetrics
 }
 
 func NewRouter(db *sqlx.DB, jwtSecret []byte) *Router {
@@ -31,11 +33,14 @@ func NewRouter(db *sqlx.DB, jwtSecret []byte) *Router {
 		Format: "text",
 	})
 
+	httpMetrics := metrics.NewHTTPMetrics()
+
 	return &Router{
 		router:    mux.NewRouter(),
 		db:        db,
 		jwtSecret: jwtSecret,
 		logger:    apiLogger,
+		metrics:   httpMetrics,
 	}
 }
 
@@ -57,9 +62,10 @@ func (r *Router) Setup() http.Handler {
 	receptionHandler := handlers.NewReceptionHandler(receptionService)
 	productHandler := handlers.NewProductHandler(receptionService)
 
-	// Глобальные middleware
-	r.router.Use(middleware.RecoveryMiddleware(r.logger))
-	r.router.Use(middleware.LoggerMiddleware(r.logger))
+	// Глобальные middleware 
+	r.router.Use(middleware.RecoveryMiddleware(r.logger)) // Сначала восстановление
+	r.router.Use(middleware.MetricsMiddleware(r.metrics)) // Затем сбор метрик
+	r.router.Use(middleware.LoggerMiddleware(r.logger))   // Затем логирование
 
 	// Health check
 	r.router.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
