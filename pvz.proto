@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package pvz.v1;
 
-option go_package = "github.com/yourproject/pvz/pvz_v1;pvz_v1";
+option go_package = "github.com/dkumancev/avito-pvz/pkg/infrastructure/grpc/pb;pb";
 
 import "google/protobuf/timestamp.proto";
 
