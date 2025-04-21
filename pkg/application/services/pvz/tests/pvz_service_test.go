@@ -1,18 +1,20 @@
-package services
+package tests
 
 import (
 	"context"
 	"testing"
 
 	"github.com/dkumancev/avito-pvz/pkg/application/repositories"
+	"github.com/dkumancev/avito-pvz/pkg/application/services"
 	"github.com/dkumancev/avito-pvz/pkg/tests"
 )
 
 func TestPVZService_CreatePVZ(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := tests.NewMockPVZRepository()
-	service := NewPVZService(mockRepo)
+	service := services.NewPVZService(mockRepo)
 
+	// Valid city
 	pvz, err := service.CreatePVZ(ctx, "Москва")
 	if err != nil {
 		t.Errorf("Expected no error for valid city, got: %v", err)
@@ -24,6 +26,7 @@ func TestPVZService_CreatePVZ(t *testing.T) {
 		t.Errorf("Expected city to be 'Москва', got %s", pvz.City)
 	}
 
+	// Invalid city
 	_, err = service.CreatePVZ(ctx, "InvalidCity")
 	if err == nil {
 		t.Error("Expected error for invalid city, got nil")
@@ -33,8 +36,9 @@ func TestPVZService_CreatePVZ(t *testing.T) {
 func TestPVZService_GetPVZ(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := tests.NewMockPVZRepository()
-	service := NewPVZService(mockRepo)
+	service := services.NewPVZService(mockRepo)
 
+	// Create a PVZ first
 	createdPVZ, _ := service.CreatePVZ(ctx, "Москва")
 
 	// Valid ID
@@ -59,12 +63,13 @@ func TestPVZService_GetPVZ(t *testing.T) {
 func TestPVZService_ListPVZs(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := tests.NewMockPVZRepository()
-	service := NewPVZService(mockRepo)
+	service := services.NewPVZService(mockRepo)
 
 	// Create a PVZ - в текущей реализации мока, Create всегда использует
 	// фиксированный ID "mock-pvz-id", так что второй вызов перезапишет первый
 	_, _ = service.CreatePVZ(ctx, "Москва")
 
+	// List all PVZs
 	filter := repositories.PVZFilter{}
 	pvzs, err := service.ListPVZs(ctx, filter)
 	if err != nil {
@@ -75,14 +80,17 @@ func TestPVZService_ListPVZs(t *testing.T) {
 	}
 }
 
-// Тест для алиаса ListPVZ (дублирует ListPVZs - TODO: удалить)
+// Тест для алиаса ListPVZ
 func TestPVZService_ListPVZ(t *testing.T) {
 	ctx := context.Background()
 	mockRepo := tests.NewMockPVZRepository()
-	service := NewPVZService(mockRepo)
+	service := services.NewPVZService(mockRepo)
 
+	// Create a PVZ - в текущей реализации мока, Create всегда использует
+	// фиксированный ID "mock-pvz-id", так что второй вызов перезапишет первый
 	_, _ = service.CreatePVZ(ctx, "Москва")
 
+	// Test alias
 	filter := repositories.PVZFilter{}
 	pvzs, err := service.ListPVZ(ctx, filter)
 	if err != nil {

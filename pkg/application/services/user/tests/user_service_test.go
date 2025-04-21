@@ -1,4 +1,4 @@
-package services
+package tests
 
 import (
 	"context"
@@ -6,8 +6,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dkumancev/avito-pvz/pkg/application/services"
+	userServices "github.com/dkumancev/avito-pvz/pkg/application/services/user"
 	"github.com/dkumancev/avito-pvz/pkg/domain"
 	"github.com/golang-jwt/jwt/v5"
+)
+
+var (
+	ErrInvalidCredentials = userServices.ErrInvalidCredentials
+	ErrUserAlreadyExists  = userServices.ErrUserAlreadyExists
 )
 
 type MockUserRepository struct {
@@ -55,7 +62,7 @@ func TestUserService_Register_Success(t *testing.T) {
 	jwtSecret := []byte("test-secret")
 	tokenExpiry := 24 * time.Hour
 
-	service := NewUserService(mockRepo, jwtSecret, tokenExpiry)
+	service := services.NewUserService(mockRepo, jwtSecret, tokenExpiry)
 
 	email := "test@example.com"
 	password := "password123"
@@ -90,7 +97,7 @@ func TestUserService_Register_UserAlreadyExists(t *testing.T) {
 	jwtSecret := []byte("test-secret")
 	tokenExpiry := 24 * time.Hour
 
-	service := NewUserService(mockRepo, jwtSecret, tokenExpiry)
+	service := services.NewUserService(mockRepo, jwtSecret, tokenExpiry)
 
 	email := "existing@example.com"
 	password := "password123"
@@ -120,7 +127,7 @@ func TestUserService_Register_InvalidData(t *testing.T) {
 	jwtSecret := []byte("test-secret")
 	tokenExpiry := 24 * time.Hour
 
-	service := NewUserService(mockRepo, jwtSecret, tokenExpiry)
+	service := services.NewUserService(mockRepo, jwtSecret, tokenExpiry)
 
 	testCases := []struct {
 		name     string
@@ -159,7 +166,6 @@ func TestUserService_Register_InvalidData(t *testing.T) {
 
 // Отдельный тест для пустого пароля
 func TestUserService_Register_EmptyPassword(t *testing.T) {
-	
 	_, err := domain.NewUser("test@example.com", "", domain.EmployeeRole)
 
 	if err == nil {
@@ -173,7 +179,7 @@ func TestUserService_Login_Success(t *testing.T) {
 	jwtSecret := []byte("test-secret")
 	tokenExpiry := 24 * time.Hour
 
-	service := NewUserService(mockRepo, jwtSecret, tokenExpiry)
+	service := services.NewUserService(mockRepo, jwtSecret, tokenExpiry)
 
 	email := "test@example.com"
 	password := "password123"
@@ -233,7 +239,7 @@ func TestUserService_Login_InvalidCredentials(t *testing.T) {
 	jwtSecret := []byte("test-secret")
 	tokenExpiry := 24 * time.Hour
 
-	service := NewUserService(mockRepo, jwtSecret, tokenExpiry)
+	service := services.NewUserService(mockRepo, jwtSecret, tokenExpiry)
 
 	email := "test@example.com"
 	password := "password123"
@@ -283,7 +289,7 @@ func TestUserService_DummyLogin(t *testing.T) {
 	jwtSecret := []byte("test-secret")
 	tokenExpiry := 24 * time.Hour
 
-	service := NewUserService(mockRepo, jwtSecret, tokenExpiry)
+	service := services.NewUserService(mockRepo, jwtSecret, tokenExpiry)
 
 	testCases := []struct {
 		name string

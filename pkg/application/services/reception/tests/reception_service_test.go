@@ -1,9 +1,10 @@
-package services
+package tests
 
 import (
 	"context"
 	"testing"
 
+	"github.com/dkumancev/avito-pvz/pkg/application/services"
 	"github.com/dkumancev/avito-pvz/pkg/domain"
 	"github.com/dkumancev/avito-pvz/pkg/tests"
 )
@@ -14,7 +15,7 @@ func TestReceptionService_CreateReception(t *testing.T) {
 	mockReceptionRepo := tests.NewMockReceptionRepository()
 	mockProductRepo := tests.NewMockProductRepository()
 
-	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
+	service := services.NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
 
 	pvz, _ := domain.NewPVZ("Москва")
 	pvz.ID = "pvz-123"
@@ -50,7 +51,7 @@ func TestReceptionService_CloseReception(t *testing.T) {
 	mockReceptionRepo := tests.NewMockReceptionRepository()
 	mockProductRepo := tests.NewMockProductRepository()
 
-	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
+	service := services.NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
 
 	pvz, _ := domain.NewPVZ("Москва")
 	pvz.ID = "pvz-123"
@@ -85,7 +86,7 @@ func TestReceptionService_AddAndRemoveProduct(t *testing.T) {
 	mockReceptionRepo := tests.NewMockReceptionRepository()
 	mockProductRepo := tests.NewMockProductRepository()
 
-	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
+	service := services.NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
 
 	pvz, _ := domain.NewPVZ("Москва")
 	pvz.ID = "pvz-123"
@@ -140,15 +141,15 @@ func TestReceptionService_AddAndRemoveProduct(t *testing.T) {
 	}
 }
 
+// Дополнительный тест для новых методов
 func TestReceptionService_GetReceptionsAndProducts(t *testing.T) {
 	ctx := context.Background()
 	mockPVZRepo := tests.NewMockPVZRepository()
 	mockReceptionRepo := tests.NewMockReceptionRepository()
 	mockProductRepo := tests.NewMockProductRepository()
 
-	service := NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
+	service := services.NewReceptionService(mockPVZRepo, mockReceptionRepo, mockProductRepo)
 
-	// Подготавливаем данные
 	pvz, _ := domain.NewPVZ("Москва")
 	pvz.ID = "pvz-123"
 	mockPVZRepo.Create(ctx, pvz)
