@@ -12,13 +12,15 @@ import (
 	"github.com/dkumancev/avito-pvz/config"
 	"github.com/dkumancev/avito-pvz/internal/api"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/logger"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/metrics"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/db"
 )
 
 type Server struct {
-	httpServer *http.Server
-	cfg        *config.Config
-	logger     *slog.Logger
+	httpServer    *http.Server
+	cfg           *config.Config
+	logger        *slog.Logger
+	metricsServer *metrics.Server
 }
 
 func NewServer(cfg *config.Config) *Server {
@@ -49,7 +51,16 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) Start() error {
 	s.logger.Info("Запуск сервиса для управления ПВЗ",
 		"environment", s.cfg.App.Environment,
-		"version", "1.0.0") 
+		"version", "1.0.0")
+
+	// Запуск сервера метрик
+	s.metricsServer = metrics.NewServer(s.cfg.Metrics.Port, s.logger)
+	if err := s.metricsServer.Start(); err != nil {
+		s.logger.Error("Ошибка запуска сервера метрик",
+			"error", logger.SanitizeError(err),
+			"port", s.cfg.Metrics.Port)
+		return err
+	}
 
 	dbConn, err := db.New(s.cfg.Postgres)
 	if err != nil {
@@ -98,6 +109,13 @@ func (s *Server) gracefulShutdown() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	if s.metricsServer != nil {
+		if err := s.metricsServer.Stop(ctx); err != nil {
+			s.logger.Error("Ошибка при остановке сервера метрик",
+				"error", logger.SanitizeError(err))
+		}
+	}
 
 	if err := s.Shutdown(ctx); err != nil {
 		s.logger.Error("Ошибка при остановке сервера",
