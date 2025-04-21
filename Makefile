@@ -1,4 +1,4 @@
-.PHONY: build test test-unit test-integration test-services test-domain test-cover test-cover-domain test-cover-services test-cover-func test-race migrate-up migrate-down migrate-status migrate-create migrate-reset help
+.PHONY: build test test-unit test-integration test-services test-domain test-cover test-cover-domain test-cover-services test-cover-func test-race migrate-up migrate-down migrate-status migrate-create migrate-reset help run-grpc
 
 # Загрузка переменных окружения из .env файла
 ifneq (,$(wildcard ./.env))
@@ -99,6 +99,10 @@ migrate-create: ## Создание новой миграции (использ�
 run: ## Запуск API сервера
 	@echo "Запуск API сервера..."
 	@go run ./cmd/api
+
+run-grpc: ## Запуск gRPC сервера
+	@echo "Запуск gRPC сервера..."
+	@go run ./cmd/grpc
 
 docker-build: ## Сборка Docker-образа
 	@echo "Сборка Docker-образа..."
