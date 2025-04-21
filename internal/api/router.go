@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/dkumancev/avito-pvz/internal/api/v1/handlers"
 	"github.com/dkumancev/avito-pvz/pkg/application/services"
 	"github.com/dkumancev/avito-pvz/pkg/domain"
+	"github.com/dkumancev/avito-pvz/pkg/infrastructure/logger"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/product"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/pvz"
 	"github.com/dkumancev/avito-pvz/pkg/infrastructure/postgres/reception"
@@ -20,13 +22,20 @@ type Router struct {
 	router    *mux.Router
 	db        *sqlx.DB
 	jwtSecret []byte
+	logger    *slog.Logger
 }
 
 func NewRouter(db *sqlx.DB, jwtSecret []byte) *Router {
+	apiLogger := logger.NewLogger(logger.Config{
+		Level:  logger.LevelInfo,
+		Format: "text",
+	})
+
 	return &Router{
 		router:    mux.NewRouter(),
 		db:        db,
 		jwtSecret: jwtSecret,
+		logger:    apiLogger,
 	}
 }
 
@@ -47,6 +56,10 @@ func (r *Router) Setup() http.Handler {
 	pvzHandler := handlers.NewPVZHandler(pvzService, receptionService)
 	receptionHandler := handlers.NewReceptionHandler(receptionService)
 	productHandler := handlers.NewProductHandler(receptionService)
+
+	// Глобальные middleware
+	r.router.Use(middleware.RecoveryMiddleware(r.logger))
+	r.router.Use(middleware.LoggerMiddleware(r.logger))
 
 	// Health check
 	r.router.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
@@ -90,5 +103,16 @@ func (r *Router) Setup() http.Handler {
 		middleware.RoleMiddleware([]domain.UserRole{domain.EmployeeRole},
 			http.HandlerFunc(productHandler.AddProduct)))).Methods(http.MethodPost)
 
+	r.logger.Info("API маршрутизатор настроен", "routes_count", muxRoutesCount(r.router))
 	return r.router
+}
+
+// количество зарегистрированных маршрутов
+func muxRoutesCount(router *mux.Router) int {
+	count := 0
+	router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		count++
+		return nil
+	})
+	return count
 }
