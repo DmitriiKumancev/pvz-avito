@@ -86,6 +86,10 @@ scrape_configs:
    - Тип: Gauge
    - Отображение: Time Series
 
+### Пример Grafana дашборда
+
+![Пример Grafana дашборда с метриками API](grafana_screen.png)
+
 ## Запуск Prometheus и Grafana в Docker
 
 Для удобства тестирования можно использовать Docker Compose:

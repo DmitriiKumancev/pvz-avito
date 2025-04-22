@@ -1,8 +1,8 @@
 # API тесты для сервиса управления ПВЗ
 
 @baseUrl = http://localhost:8080
-@employeeToken = {{dummyLoginEmployee.response.body.token}}
-@moderatorToken = {{dummyLoginModerator.response.body.token}}
+@employeeToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImVtcGxveWVlM0BleGFtcGxlLmNvbSIsImV4cCI6MTc0NTMyMzUwNiwiaWQiOiI3ZmNkY2FiMC1iNDExLTQ3NzEtYjhjOS1jYmI3MDUxODk4MGMiLCJyb2xlIjoiZW1wbG95ZWUifQ.UYPUpbRJ2JHTO8R9DFg-jvmmHyNn2eEqgjRHyifycgY
+@moderatorToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6Im1vZGVyYXRvcjJAZXhhbXBsZS5jb20iLCJleHAiOjE3NDUzMjUxODIsImlkIjoiYjlkNmUyYjktMDNlOC00MDYxLThjNDAtMDBiMmU5ODk3MTMzIiwicm9sZSI6Im1vZGVyYXRvciJ9.U16LYxer1oaGaMaiKWsWVefgpeqOk_x3UM8oWSkxwWs
 
 ### Health check
 GET {{baseUrl}}/health
@@ -16,7 +16,7 @@ POST {{baseUrl}}/register
 Content-Type: application/json
 
 {
-  "email": "employee@example.com",
+  "email": "employee3@example.com",
   "password": "password123",
   "role": "employee"
 }
@@ -27,7 +27,7 @@ POST {{baseUrl}}/register
 Content-Type: application/json
 
 {
-  "email": "moderator@example.com",
+  "email": "moderator2@example.com",
   "password": "password123",
   "role": "moderator"
 }
@@ -38,7 +38,7 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-  "email": "employee@example.com",
+  "email": "employee3@example.com",
   "password": "password123"
 }
 
@@ -48,7 +48,7 @@ POST {{baseUrl}}/login
 Content-Type: application/json
 
 {
-  "email": "moderator@example.com",
+  "email": "moderator2@example.com",
   "password": "password123"
 }
 
@@ -79,7 +79,7 @@ Authorization: Bearer {{moderatorToken}}
 Content-Type: application/json
 
 {
-  "city": "Москва"
+  "city": "Казань"
 }
 
 ### Попытка создания ПВЗ с токеном сотрудника (должен вернуть 403 Forbidden)
@@ -120,7 +120,7 @@ Authorization: Bearer {{employeeToken}}
 Content-Type: application/json
 
 {
-  "pvzId": "{{createPVZ.response.body.id}}"
+  "pvzId": "2826e940-a1fd-4cd9-873b-f3579accbad9"
 }
 
 ### Попытка создания приемки модератором (должен вернуть 403 Forbidden)
@@ -134,7 +134,7 @@ Content-Type: application/json
 
 ### Закрытие последней открытой приемки
 # @name closeLastReception
-POST {{baseUrl}}/pvz/{{createPVZ.response.body.id}}/close_last_reception
+POST {{baseUrl}}/pvz/e54dc1e5-baa6-4e88-98ec-8af06bc5f731/close_last_reception
 Authorization: Bearer {{employeeToken}}
 Content-Type: application/json
 
@@ -152,8 +152,8 @@ Authorization: Bearer {{employeeToken}}
 Content-Type: application/json
 
 {
-  "type": "electronics",
-  "pvzId": "{{createPVZ.response.body.id}}"
+  "type": "одежда",
+  "pvzId": "2826e940-a1fd-4cd9-873b-f3579accbad9"
 }
 
 ### Добавление товара одежды в текущую приемку
@@ -163,8 +163,8 @@ Authorization: Bearer {{employeeToken}}
 Content-Type: application/json
 
 {
-  "type": "clothes",
-  "pvzId": "{{createPVZ.response.body.id}}"
+  "type": "обувь",
+  "pvzId": "e54dc1e5-baa6-4e88-98ec-8af06bc5f731"
 }
 
 ### Добавление товара обуви в текущую приемку
